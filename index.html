@@ -581,7 +581,7 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 const ADMIN_PIN      = "1705";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
-const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbycLgd_0NnyMJQ1VIac9QWguUR3zc5APLkE1wMWamR99-xLPfZ_wRcW_C_ug0Nmb3QB/exec";
+const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycby5Ht2paYQc_bqQKNpNBo0m4lNZ-uBe7c0XuHAU6BDN72Nts3GbLT7kiu1idu2RgTB5/exec";
 
 // ═══════════════════════════════════════
 // IN-MEMORY STORE  (Google Sheets is the source of truth)
@@ -650,7 +650,7 @@ function showLoadingScreen(show){
 }
 
 async function syncFromSheets(){
-  if(SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+  if(SCRIPT_URL === 'https://script.google.com/macros/s/AKfycby5Ht2paYQc_bqQKNpNBo0m4lNZ-uBe7c0XuHAU6BDN72Nts3GbLT7kiu1idu2RgTB5/exec'){
     // No sheet connected — use empty data (setup mode)
     dataLoaded = true;
     return;
@@ -826,8 +826,12 @@ function renderEmpHolidays(){
 // ═══════════════════════════════════════
 function mark(type){
   const now   = new Date();
-  const entry = { emp:currentEmp.name, empId:currentEmp.id||'N/A', date:getToday(), time:fmtTime(now), type, ts:now.toISOString(), note:'' };
-  const logs  = getLogs();
+  const entry = {
+    emp:currentEmp.name, empId:currentEmp.id||'N/A',
+    date:getToday(), time:fmtTime(now), type,
+    ts:getISTTimestamp(), note:''
+  };
+  const logs = getLogs();
   logs.push(entry);
   setLogs(logs);
   toast(type==='LOGIN'?'✓ Login recorded':type==='LOGOUT'?'✓ Logout recorded':'✓ WFH recorded');
@@ -865,7 +869,7 @@ function submitLeave(){
     status: 'Pending',
     appliedDate: getToday(),
     appliedTime: fmtTime(new Date()),
-    ts: new Date().toISOString()
+    ts: getISTTimestamp()
   };
   const leaves = getLeaves();
   leaves.push(req);
@@ -1214,7 +1218,7 @@ function switchTab(id){
 // GOOGLE SHEETS SYNC
 // ═══════════════════════════════════════
 async function sendSheet(payload, refreshAfter=false){
-  if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+  if(SCRIPT_URL==='https://script.google.com/macros/s/AKfycby5Ht2paYQc_bqQKNpNBo0m4lNZ-uBe7c0XuHAU6BDN72Nts3GbLT7kiu1idu2RgTB5/exec'){
     // No sheet — just keep in-memory DB updated
     return;
   }
@@ -1236,10 +1240,26 @@ async function sendSheet(payload, refreshAfter=false){
 // ═══════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════
-function getToday(){ return new Date().toISOString().split('T')[0]; }
-function fmtTime(d){ return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}); }
-function fmtLong(s){ return new Date(s+'T12:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
-function fmtShort(s){ return new Date(s+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+// All time functions use IST (Asia/Kolkata, UTC+5:30)
+const IST_OPTS = { timeZone:'Asia/Kolkata' };
+function getToday(){
+  return new Date().toLocaleDateString('en-CA', IST_OPTS); // en-CA gives yyyy-mm-dd
+}
+function fmtTime(d){
+  return d.toLocaleTimeString('en-GB', { ...IST_OPTS, hour:'2-digit', minute:'2-digit', hour12:false });
+}
+function fmtLong(s){
+  return new Date(s+'T12:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric',...IST_OPTS});
+}
+function fmtShort(s){
+  return new Date(s+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',...IST_OPTS});
+}
+function getISTTimestamp(){
+  const now = new Date();
+  const date = now.toLocaleDateString('en-CA', IST_OPTS);
+  const time = now.toLocaleTimeString('en-GB', { ...IST_OPTS, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  return `${date} ${time} IST`;
+}
 function diffMins(t1,t2){ const [h1,m1]=t1.split(':').map(Number),[h2,m2]=t2.split(':').map(Number); return Math.max(0,(h2*60+m2)-(h1*60+m1)); }
 function minsToHM(m){ return `${Math.floor(m/60)}h ${m%60}m`; }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }

@@ -579,9 +579,9 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const ADMIN_PIN      = "1705";   // Change this!
+const ADMIN_PIN      = "1234";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
-const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycby5Ht2paYQc_bqQKNpNBo0m4lNZ-uBe7c0XuHAU6BDN72Nts3GbLT7kiu1idu2RgTB5/exec";
+const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbz66AQzeb9Uq6JRDnb50JiTZOpmJBhNFEJ9dUMVsP_dBiFyHUQL1bL210WhnST8j96M/exec";
 
 // ═══════════════════════════════════════
 // IN-MEMORY STORE  (Google Sheets is the source of truth)
@@ -650,24 +650,27 @@ function showLoadingScreen(show){
 }
 
 async function syncFromSheets(){
-  if(SCRIPT_URL === 'https://script.google.com/macros/s/AKfycby5Ht2paYQc_bqQKNpNBo0m4lNZ-uBe7c0XuHAU6BDN72Nts3GbLT7kiu1idu2RgTB5/exec'){
-    // No sheet connected — use empty data (setup mode)
+  if(SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbz66AQzeb9Uq6JRDnb50JiTZOpmJBhNFEJ9dUMVsP_dBiFyHUQL1bL210WhnST8j96M/exec'){
     dataLoaded = true;
     return;
   }
   try {
+    // GET requests work fine with CORS — no preflight needed
     const url = SCRIPT_URL + '?action=fetchAll&t=' + Date.now();
-    const res = await fetch(url);
+    const res  = await fetch(url, { method:'GET' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if(data.employees) DB.employees = data.employees;
-    if(data.logs)      DB.logs      = data.logs;
-    if(data.leaves)    DB.leaves    = data.leaves;
-    if(data.holidays)  DB.holidays  = data.holidays;
+    if(data.error) throw new Error(data.error);
+    if(Array.isArray(data.employees)) DB.employees = data.employees;
+    if(Array.isArray(data.logs))      DB.logs      = data.logs;
+    if(Array.isArray(data.leaves))    DB.leaves    = data.leaves;
+    if(Array.isArray(data.holidays))  DB.holidays  = data.holidays;
+    console.log('✓ Synced from Sheet — Employees:', DB.employees.length, '| Logs:', DB.logs.length, '| Holidays:', DB.holidays.length);
     dataLoaded = true;
   } catch(e) {
-    console.warn('Could not fetch from Sheets:', e);
-    dataLoaded = true; // continue with empty — don't block UI
-    toast('⚠ Could not load data from server. Check connection.');
+    console.error('Sync failed:', e);
+    dataLoaded = true;
+    toast('⚠ Could not load data from server — working offline.');
   }
 }
 
@@ -1217,23 +1220,20 @@ function switchTab(id){
 // ═══════════════════════════════════════
 // GOOGLE SHEETS SYNC
 // ═══════════════════════════════════════
+// Uses GET with encoded payload — zero CORS issues, confirmed delivery
 async function sendSheet(payload, refreshAfter=false){
-  if(SCRIPT_URL==='https://script.google.com/macros/s/AKfycby5Ht2paYQc_bqQKNpNBo0m4lNZ-uBe7c0XuHAU6BDN72Nts3GbLT7kiu1idu2RgTB5/exec'){
-    // No sheet — just keep in-memory DB updated
-    return;
-  }
+  if(SCRIPT_URL==='https://script.google.com/macros/s/AKfycbz66AQzeb9Uq6JRDnb50JiTZOpmJBhNFEJ9dUMVsP_dBiFyHUQL1bL210WhnST8j96M/exec') return;
   try{
-    await fetch(SCRIPT_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
-    if(refreshAfter){
-      await syncFromSheets();
-    }
-  }catch(e){
-    console.warn('Sheet sync failed:',e);
-    toast('⚠ Could not sync to server. Check your connection.');
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    const url     = SCRIPT_URL + '?payload=' + encoded + '&t=' + Date.now();
+    const res     = await fetch(url, { method:'GET' });
+    const json    = await res.json();
+    if(json.status !== 'ok') throw new Error(json.msg || 'Unknown error');
+    console.log('✓ Sheet write OK:', payload.type);
+    if(refreshAfter) await syncFromSheets();
+  } catch(e){
+    console.error('Sheet write failed:', e);
+    toast('⚠ Could not save to sheet: ' + e.message);
   }
 }
 

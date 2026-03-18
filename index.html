@@ -333,35 +333,39 @@ tbody tr:hover td{background:var(--surface2);}
   </div>
   <div class="content">
 
-    <div class="stat-row cols2">
-      <div class="stat-box">
-        <div class="stat-val" id="emp-stat-present">0</div>
-        <div class="stat-lbl">Present this month</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" id="emp-stat-hours">0h 0m</div>
-        <div class="stat-lbl">Hours today</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Today</div>
-      <div class="trow"><span class="lbl">Status</span><span id="emp-status-badge" class="badge bg-amber">Not Marked</span></div>
-      <div class="trow"><span class="lbl">Login</span><span class="val mono" id="emp-login-t">--:--</span></div>
-      <div class="trow"><span class="lbl">Logout</span><span class="val mono" id="emp-logout-t">--:--</span></div>
-      <div class="trow"><span class="lbl">Mode</span><span class="val" id="emp-mode">--</span></div>
-    </div>
-
+    <!-- Holiday notice (only shown on actual holidays) -->
     <div id="holiday-notice" class="notice hidden">
-      <strong>🎉 Holiday Today</strong>
-      <span id="holiday-notice-name"></span> — No attendance required.
+      🎉 <strong id="holiday-notice-name"></strong> — Public holiday, no attendance required.
     </div>
 
+    <!-- Combined summary + today card -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <!-- Mini stats bar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);">
+        <div style="padding:14px 18px;border-right:1px solid var(--border);">
+          <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;" id="emp-stat-present">0</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Days present this month</div>
+        </div>
+        <div style="padding:14px 18px;">
+          <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;" id="emp-stat-hours">0h 0m</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Hours logged today</div>
+        </div>
+      </div>
+      <!-- Today details -->
+      <div style="padding:4px 18px 6px;">
+        <div class="trow"><span class="lbl">Status</span><span id="emp-status-badge" class="badge bg-amber">Not Marked</span></div>
+        <div class="trow"><span class="lbl">Login time</span><span class="val mono" id="emp-login-t">--:--</span></div>
+        <div class="trow"><span class="lbl">Logout time</span><span class="val mono" id="emp-logout-t">--:--</span></div>
+        <div class="trow"><span class="lbl">Mode</span><span class="val" id="emp-mode">--</span></div>
+      </div>
+    </div>
+
+    <!-- Attendance actions -->
     <div class="card">
       <div class="card-label">Mark Attendance</div>
       <div class="act-grid">
         <button class="act-btn a-login" id="btn-login" onclick="mark('LOGIN')">
-          <span class="icon">🟢</span>Login
+          <span class="icon">🟢</span>Office Login
         </button>
         <button class="act-btn a-logout" id="btn-logout" onclick="mark('LOGOUT')" disabled>
           <span class="icon">🔴</span>Logout
@@ -375,7 +379,7 @@ tbody tr:hover td{background:var(--surface2);}
       </div>
     </div>
 
-    <!-- Leave form -->
+    <!-- Leave form (hidden by default) -->
     <div class="card" id="leave-panel">
       <div class="card-label">Leave Application</div>
       <div class="fg-row">
@@ -389,27 +393,31 @@ tbody tr:hover td{background:var(--surface2);}
           <option>Earned Leave</option><option>Unpaid Leave</option><option>Other</option>
         </select>
       </div>
-      <div class="fg"><label>Reason</label><textarea id="lv-reason" placeholder="Brief reason..."></textarea></div>
+      <div class="fg"><label>Reason</label><textarea id="lv-reason" placeholder="Brief reason for leave..."></textarea></div>
       <button class="btn btn-primary" onclick="submitLeave()">Submit Request</button>
       <button class="btn btn-ghost" onclick="closeLeave()">Cancel</button>
     </div>
 
-    <!-- My leave requests -->
-    <div class="card">
-      <div class="card-label">My Leave Requests</div>
-      <div id="emp-leaves"><div class="empty">No leave requests</div></div>
-    </div>
-
-    <!-- Holidays -->
-    <div class="card">
-      <div class="card-label">Upcoming Holidays</div>
-      <div id="emp-holidays"><div class="empty">No holidays listed</div></div>
-    </div>
-
-    <!-- History -->
+    <!-- Today's activity + leave requests in two compact cards -->
     <div class="card">
       <div class="card-label">Today's Activity</div>
-      <div id="emp-hist"><div class="empty">No activity yet</div></div>
+      <div id="emp-hist"><div class="empty">No activity yet today</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">My Leave Requests</div>
+      <div id="emp-leaves"><div class="empty">No leave requests submitted</div></div>
+    </div>
+
+    <!-- Holidays collapsible at bottom -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleHolidayList()">
+        <div class="card-label" style="margin:0;">Upcoming Holidays</div>
+        <span style="font-size:12px;color:var(--ink3);" id="hd-toggle-arrow">Show ▾</span>
+      </div>
+      <div id="emp-holidays-wrap" style="display:none;margin-top:12px;">
+        <div id="emp-holidays"><div class="empty">No upcoming holidays</div></div>
+      </div>
     </div>
 
   </div>
@@ -570,9 +578,9 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const ADMIN_PIN      = "1705";   // Change this!
+const ADMIN_PIN      = "1234";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
-const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwuPf-qUqpITTjNiqmKR4lekgFFvZlVyBeD1c_n0CBXZJ9eMPXORwTFdw_316UY20d9/exec";
+const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwuPf-qUqpITTjNiqmKR4lekgFFvZlVyBeD1c_n0CBXZJ9eMPXORwTFdw_316UY20d9/execOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
 
 // ═══════════════════════════════════════
 // DATA HELPERS
@@ -666,9 +674,9 @@ function renderEmpDash(){
   document.getElementById('emp-tb-date').textContent = fmtLong(today);
   document.getElementById('emp-av').textContent = init;
 
-  // Holiday check
+  // Holiday check — trim whitespace from stored dates to prevent false matches
   const holidays = getHolidays();
-  const todayHoliday = holidays.find(h=>h.date===today);
+  const todayHoliday = holidays.find(h=>h.date && h.date.trim()===today);
   const hdNotice = document.getElementById('holiday-notice');
   if(todayHoliday){
     hdNotice.classList.remove('hidden');
@@ -694,10 +702,11 @@ function renderEmpDash(){
   document.getElementById('emp-logout-t').textContent = logoutEvt ? logoutEvt.time : '--:--';
   document.getElementById('emp-mode').textContent     = wfhEvt ? 'Work From Home' : loginEvt ? 'Office' : '--';
 
-  // Hours today
-  if(loginEvt){
+  // Hours today — for WFH, use WFH mark time as start; logout records end
+  const startEvt = loginEvt || wfhEvt;
+  if(startEvt){
     const endT = logoutEvt ? logoutEvt.time : fmtTime(new Date());
-    document.getElementById('emp-stat-hours').textContent = minsToHM(diffMins(loginEvt.time,endT));
+    document.getElementById('emp-stat-hours').textContent = minsToHM(diffMins(startEvt.time,endT));
   } else {
     document.getElementById('emp-stat-hours').textContent = '0h 0m';
   }
@@ -707,10 +716,10 @@ function renderEmpDash(){
   const presentDays = new Set(monthLogs.filter(l=>l.type==='LOGIN'||l.type==='WFH').map(l=>l.date)).size;
   document.getElementById('emp-stat-present').textContent = presentDays;
 
-  // Buttons
+  // Buttons — WFH also enables logout so employees can record end of day
   document.getElementById('btn-login').disabled  = !!(loginEvt||wfhEvt);
   document.getElementById('btn-wfh').disabled    = !!(loginEvt||wfhEvt);
-  document.getElementById('btn-logout').disabled = !(loginEvt && !logoutEvt);
+  document.getElementById('btn-logout').disabled = !((loginEvt||wfhEvt) && !logoutEvt);
 
   // History
   renderEmpHist(todayLogs);
@@ -1158,6 +1167,14 @@ function fmtShort(s){ return new Date(s+'T12:00:00').toLocaleDateString('en-IN',
 function diffMins(t1,t2){ const [h1,m1]=t1.split(':').map(Number),[h2,m2]=t2.split(':').map(Number); return Math.max(0,(h2*60+m2)-(h1*60+m1)); }
 function minsToHM(m){ return `${Math.floor(m/60)}h ${m%60}m`; }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+
+function toggleHolidayList(){
+  const wrap = document.getElementById('emp-holidays-wrap');
+  const arrow = document.getElementById('hd-toggle-arrow');
+  const open = wrap.style.display==='none';
+  wrap.style.display = open ? 'block' : 'none';
+  arrow.textContent = open ? 'Hide ▴' : 'Show ▾';
+}
 
 init();
 </script>

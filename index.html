@@ -454,6 +454,7 @@ tbody tr:hover td{background:var(--surface2);}
       <div class="tb-sub" id="adm-date"></div>
     </div>
     <div class="tb-right">
+      <button class="exit-btn" onclick="adminRefresh()" title="Sync latest data from Sheet">🔄 Sync</button>
       <button class="exit-btn" style="color:var(--red)" onclick="adminOut()">Logout</button>
     </div>
   </div>
@@ -578,26 +579,30 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const ADMIN_PIN      = "1234";   // Change this!
+const ADMIN_PIN      = "1705";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
-const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwuPf-qUqpITTjNiqmKR4lekgFFvZlVyBeD1c_n0CBXZJ9eMPXORwTFdw_316UY20d9/execOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbycLgd_0NnyMJQ1VIac9QWguUR3zc5APLkE1wMWamR99-xLPfZ_wRcW_C_ug0Nmb3QB/exec";
 
 // ═══════════════════════════════════════
-// DATA HELPERS
+// IN-MEMORY STORE  (Google Sheets is the source of truth)
+// localStorage is only used for the active session token
 // ═══════════════════════════════════════
+let DB = { employees:[], logs:[], leaves:[], holidays:[] };
+
+const getEmps     = () => DB.employees;
+const setEmps     = v  => { DB.employees = v; };
+const getLogs     = () => DB.logs;
+const setLogs     = v  => { DB.logs = v; };
+const getLeaves   = () => DB.leaves;
+const setLeaves   = v  => { DB.leaves = v; };
+const getHolidays = () => DB.holidays;
+const setHolidays = v  => { DB.holidays = v; };
+
 const LS = {
-  get:(k,d=[])=>{ try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;} },
+  get:(k,d=null)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{return d;} },
   set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
   del:(k)=>localStorage.removeItem(k)
 };
-const getEmps     = ()=> LS.get('att_employees',[]);
-const setEmps     = v => LS.set('att_employees',v);
-const getLogs     = ()=> LS.get('att_logs',[]);
-const setLogs     = v => LS.set('att_logs',v);
-const getLeaves   = ()=> LS.get('att_leaves',[]);
-const setLeaves   = v => LS.set('att_leaves',v);
-const getHolidays = ()=> LS.get('att_holidays',[]);
-const setHolidays = v => LS.set('att_holidays',v);
 
 // ═══════════════════════════════════════
 // SCREEN NAV
@@ -609,20 +614,66 @@ function go(id){
 }
 
 // ═══════════════════════════════════════
-// INIT
+// INIT — always loads fresh data from Sheets
 // ═══════════════════════════════════════
-let currentEmp = null;
-let logFilter  = 'ALL';
+let currentEmp  = null;
+let logFilter   = 'ALL';
 let leaveFilter = 'all';
+let dataLoaded  = false;
 
-function init(){
-  const saved = LS.get('att_session', null);
+async function init(){
+  showLoadingScreen(true);
+  await syncFromSheets();
+  showLoadingScreen(false);
+
+  const saved = LS.get('att_session');
   if(saved && saved.user){
-    const emps = getEmps();
-    const emp = emps.find(e=>e.username===saved.user);
+    const emp = DB.employees.find(e=>e.username===saved.user);
     if(emp){ currentEmp=emp; renderEmpDash(); go('s-emp'); return; }
+    else { LS.del('att_session'); } // employee was removed
   }
   go('s-landing');
+}
+
+function showLoadingScreen(show){
+  let el = document.getElementById('loading-screen');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'loading-screen';
+    el.style.cssText = 'position:fixed;inset:0;background:#f0f4ff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:DM Sans,sans-serif;';
+    el.innerHTML = '<div style="width:44px;height:44px;background:#4f46e5;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;box-shadow:0 6px 18px rgba(79,70,229,.3)">📋</div>'
+      + '<div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#4f46e5;margin-bottom:6px">Commodities Control</div>'
+      + '<div style="font-size:13px;color:#a1a1aa;" id="loading-msg">Loading data...</div>';
+    document.body.appendChild(el);
+  }
+  el.style.display = show ? 'flex' : 'none';
+}
+
+async function syncFromSheets(){
+  if(SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+    // No sheet connected — use empty data (setup mode)
+    dataLoaded = true;
+    return;
+  }
+  try {
+    const url = SCRIPT_URL + '?action=fetchAll&t=' + Date.now();
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.employees) DB.employees = data.employees;
+    if(data.logs)      DB.logs      = data.logs;
+    if(data.leaves)    DB.leaves    = data.leaves;
+    if(data.holidays)  DB.holidays  = data.holidays;
+    dataLoaded = true;
+  } catch(e) {
+    console.warn('Could not fetch from Sheets:', e);
+    dataLoaded = true; // continue with empty — don't block UI
+    toast('⚠ Could not load data from server. Check connection.');
+  }
+}
+
+// Call this after any admin change to refresh data
+async function resync(){
+  await syncFromSheets();
 }
 
 // ═══════════════════════════════════════
@@ -902,7 +953,7 @@ function renderEmpList(){
     </div>`).join('');
 }
 
-function addEmp(){
+async function addEmp(){
   const name = document.getElementById('ae-name').value.trim();
   const id   = document.getElementById('ae-id').value.trim();
   const user = document.getElementById('ae-user').value.trim().toLowerCase();
@@ -910,7 +961,8 @@ function addEmp(){
   if(!name||!user||!pass){ toast('Name, username and password are required'); return; }
   const emps = getEmps();
   if(emps.find(e=>e.username===user)){ toast('Username already exists'); return; }
-  emps.push({ name, id:id||'', username:user, password:pass, added:getToday() });
+  const newEmp = { name, id:id||'', username:user, password:pass, added:getToday() };
+  emps.push(newEmp);
   setEmps(emps);
   document.getElementById('ae-name').value='';
   document.getElementById('ae-id').value='';
@@ -919,27 +971,33 @@ function addEmp(){
   renderEmpList();
   updateAdminStats();
   populateLogEmpSelect();
-  toast(`✓ ${name} added`);
+  toast(`✓ ${name} added — syncing...`);
+  await sendSheet({ type:'ADD_EMPLOYEE', emp:name, name, empId:id||'', username:user, password:pass, date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'' }, true);
+  toast(`✓ ${name} saved to sheet`);
 }
 
-function delEmp(i){
+async function delEmp(i){
   const emps = getEmps();
   if(!confirm(`Remove ${emps[i].name}? Their attendance data will be kept.`)) return;
-  const name = emps[i].name;
+  const emp  = emps[i];
   emps.splice(i,1);
   setEmps(emps);
   renderEmpList();
   updateAdminStats();
-  toast(`${name} removed`);
+  toast(`${emp.name} removed — syncing...`);
+  await sendSheet({ type:'REMOVE_EMPLOYEE', emp:emp.name, username:emp.username, date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'', empId:emp.id||'' }, true);
+  toast(`✓ ${emp.name} removed from sheet`);
 }
 
-function resetPass(i){
+async function resetPass(i){
   const emps    = getEmps();
   const newPass = prompt(`Enter new password for ${emps[i].name}:`);
   if(!newPass||!newPass.trim()) return;
   emps[i].password = newPass.trim();
   setEmps(emps);
-  toast(`✓ Password updated for ${emps[i].name}`);
+  toast(`✓ Password updated — syncing...`);
+  await sendSheet({ type:'RESET_PASSWORD', emp:emps[i].name, username:emps[i].username, password:newPass.trim(), date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'', empId:emps[i].id||'' }, true);
+  toast(`✓ Password saved to sheet`);
 }
 
 function populateLogEmpSelect(){
@@ -982,23 +1040,24 @@ function renderLeaveRequests(){
     </div>`).join('');
 }
 
-function actLeave(id, status){
+async function actLeave(id, status){
   const leaves = getLeaves();
   const idx    = leaves.findIndex(r=>r.id===id);
   if(idx===-1) return;
-  leaves[idx].status        = status;
-  leaves[idx].actionDate    = getToday();
+  leaves[idx].status     = status;
+  leaves[idx].actionDate = getToday();
   setLeaves(leaves);
   updateAdminStats();
   renderLeaveRequests();
-  toast(`✓ Leave ${status.toLowerCase()}`);
-  sendSheet({ type:'LEAVE_ACTION', leaveId:id, status, emp:leaves[idx].emp, date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'', empId:leaves[idx].empId });
+  toast(`✓ Leave ${status.toLowerCase()} — syncing...`);
+  await sendSheet({ type:'LEAVE_ACTION', leaveId:id, status, emp:leaves[idx].emp, date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'', empId:leaves[idx].empId||'' }, true);
+  toast(`✓ Leave ${status.toLowerCase()} and saved`);
 }
 
 // ═══════════════════════════════════════
 // ADMIN: HOLIDAYS
 // ═══════════════════════════════════════
-function addHoliday(){
+async function addHoliday(){
   const date = document.getElementById('hd-date').value;
   const name = document.getElementById('hd-name').value.trim();
   if(!date||!name){ toast('Fill both date and name'); return; }
@@ -1010,14 +1069,18 @@ function addHoliday(){
   document.getElementById('hd-date').value='';
   document.getElementById('hd-name').value='';
   renderHolidayList();
-  toast(`✓ ${name} added`);
+  toast(`✓ ${name} added — syncing...`);
+  await sendSheet({ type:'ADD_HOLIDAY', date, name, emp:'admin', empId:'', time:fmtTime(new Date()), ts:new Date().toISOString(), note:'' }, true);
+  toast(`✓ ${name} saved to sheet`);
 }
 
-function delHoliday(date){
+async function delHoliday(date){
   const list = getHolidays().filter(h=>h.date!==date);
   setHolidays(list);
   renderHolidayList();
-  toast('Holiday removed');
+  toast('Holiday removed — syncing...');
+  await sendSheet({ type:'REMOVE_HOLIDAY', date, emp:'admin', empId:'', time:fmtTime(new Date()), ts:new Date().toISOString(), note:'' }, true);
+  toast('✓ Holiday removed from sheet');
 }
 
 function renderHolidayList(){
@@ -1150,11 +1213,24 @@ function switchTab(id){
 // ═══════════════════════════════════════
 // GOOGLE SHEETS SYNC
 // ═══════════════════════════════════════
-async function sendSheet(payload){
-  if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') return;
+async function sendSheet(payload, refreshAfter=false){
+  if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+    // No sheet — just keep in-memory DB updated
+    return;
+  }
   try{
-    await fetch(SCRIPT_URL,{ method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-  }catch(e){ console.warn('Sheet sync failed:',e); }
+    await fetch(SCRIPT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(refreshAfter){
+      await syncFromSheets();
+    }
+  }catch(e){
+    console.warn('Sheet sync failed:',e);
+    toast('⚠ Could not sync to server. Check your connection.');
+  }
 }
 
 // ═══════════════════════════════════════
@@ -1174,6 +1250,13 @@ function toggleHolidayList(){
   const open = wrap.style.display==='none';
   wrap.style.display = open ? 'block' : 'none';
   arrow.textContent = open ? 'Hide ▴' : 'Show ▾';
+}
+
+async function adminRefresh(){
+  toast('Syncing data from Sheet...');
+  await syncFromSheets();
+  loadAdmin();
+  toast('✓ Data refreshed from Sheet');
 }
 
 init();

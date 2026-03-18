@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Commodities Control — Attendance Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --ink:#18181b;--ink2:#52525b;--ink3:#a1a1aa;
+  --surface:#fff;--surface2:#f4f4f5;--surface3:#e4e4e7;
+  --accent:#4f46e5;--accent2:#4338ca;--accent-light:#eef2ff;
+  --green:#059669;--green-light:#ecfdf5;
+  --red:#dc2626;--red-light:#fef2f2;
+  --amber:#d97706;--amber-light:#fffbeb;
+  --blue:#2563eb;--blue-light:#eff6ff;
+  --border:rgba(0,0,0,.08);
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --r:14px;--r-sm:8px;--r-xs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--surface2);color:var(--ink);min-height:100vh;font-size:15px;}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ── LANDING ── */
+#s-landing{
+  background:#f0f4ff;
+  align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+#s-landing::before{
+  content:'';position:absolute;top:-150px;right:-100px;
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(79,70,229,.09) 0%,transparent 70%);
+  pointer-events:none;
+}
+#s-landing::after{
+  content:'';position:absolute;bottom:-100px;left:-80px;
+  width:350px;height:350px;border-radius:50%;
+  background:radial-gradient(circle,rgba(37,99,235,.07) 0%,transparent 70%);
+  pointer-events:none;
+}
+.land-wrap{width:100%;max-width:420px;padding:40px 20px;text-align:center;position:relative;z-index:1;}
+.land-header{
+  background:#fff;border-radius:var(--r);border:1px solid rgba(79,70,229,.12);
+  padding:32px 28px 28px;margin-bottom:14px;
+  box-shadow:0 4px 24px rgba(79,70,229,.08);
+}
+.land-mark{
+  width:64px;height:64px;background:var(--accent);border-radius:18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:30px;margin-bottom:16px;
+  box-shadow:0 6px 18px rgba(79,70,229,.28);
+}
+.land-company{font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.land-title{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.4px;line-height:1.25;}
+.land-tagline{font-size:14px;color:var(--ink3);margin-top:6px;}
+.land-divider{height:1px;background:var(--border);margin:22px 0 18px;}
+.land-cta-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:12px;text-align:left;}
+.lbtn{
+  display:flex;width:100%;padding:14px 16px;border-radius:var(--r-sm);
+  font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;
+  border:1.5px solid var(--border);margin-bottom:10px;
+  transition:all .18s;align-items:center;gap:12px;
+  background:#fff;color:var(--ink);
+  box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.lbtn:last-child{margin-bottom:0;}
+.lbtn-emp:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(79,70,229,.13);transform:translateY(-2px);}
+.lbtn-adm{background:#fafafa;}
+.lbtn-adm:hover{border-color:var(--ink2);box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-2px);}
+.lbtn .lbtn-icon{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.lbtn-emp .lbtn-icon{background:var(--accent-light);}
+.lbtn-adm .lbtn-icon{background:var(--surface2);}
+.lbtn-text{flex:1;text-align:left;}
+.lbtn-title{font-weight:500;font-size:14px;color:var(--ink);}
+.lbtn-sub{font-size:12px;color:var(--ink3);margin-top:2px;}
+.lbtn-arr{color:var(--ink3);font-size:14px;}
+.land-footer{margin-top:14px;font-size:12px;color:var(--ink3);}
+
+/* ── TOP BAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:12px;height:56px;position:sticky;top:0;z-index:50;flex-shrink:0;}
+.tb-back{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink2);flex-shrink:0;}
+.tb-back:hover{background:var(--surface2);}
+.tb-info{flex:1;min-width:0;}
+.tb-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-sub{font-size:12px;color:var(--ink3);margin-top:1px;}
+.tb-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
+.exit-btn{padding:6px 12px;border-radius:var(--r-xs);border:1px solid var(--border);background:none;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;color:var(--ink2);}
+.exit-btn:hover{background:var(--surface2);}
+
+/* ── CONTENT ── */
+.content{flex:1;padding:16px;max-width:540px;width:100%;margin:0 auto;}
+.content-wide{max-width:960px;}
+
+/* ── CARD ── */
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow);}
+.card-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:14px;}
+
+/* ── FORM ── */
+.fg{margin-bottom:13px;}
+.fg label{display:block;font-size:13px;font-weight:500;color:var(--ink2);margin-bottom:5px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .15s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);}
+.fg textarea{resize:vertical;min-height:68px;}
+.fg-row{display:flex;gap:10px;}
+.fg-row .fg{flex:1;margin-bottom:0;}
+
+/* ── BUTTONS ── */
+.btn{display:block;width:100%;padding:12px 16px;border-radius:var(--r-sm);border:none;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center;}
+.btn:active{transform:scale(.98);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-ghost{background:none;color:var(--accent);border:1.5px solid var(--accent);margin-top:8px;}
+.btn-ghost:hover{background:var(--accent-light);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-sm{padding:7px 13px;width:auto;font-size:13px;border-radius:var(--r-xs);display:inline-block;}
+.btn-xs{padding:5px 10px;width:auto;font-size:12px;border-radius:var(--r-xs);display:inline-block;}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;}
+.bg-green{background:var(--green-light);color:var(--green);}
+.bg-red{background:var(--red-light);color:var(--red);}
+.bg-amber{background:var(--amber-light);color:var(--amber);}
+.bg-blue{background:var(--blue-light);color:var(--blue);}
+.bg-purple{background:var(--accent-light);color:var(--accent);}
+.bg-gray{background:var(--surface2);color:var(--ink3);}
+
+/* ── STAT STRIP ── */
+.stat-row{display:grid;gap:10px;margin-bottom:14px;}
+.stat-row.cols2{grid-template-columns:1fr 1fr;}
+.stat-row.cols3{grid-template-columns:repeat(3,1fr);}
+.stat-row.cols4{grid-template-columns:repeat(4,1fr);}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;box-shadow:var(--shadow);}
+.stat-val{font-size:22px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;}
+.stat-lbl{font-size:12px;color:var(--ink3);margin-top:3px;}
+
+/* ── TODAY ROW ── */
+.trow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.trow:last-child{border-bottom:none;padding-bottom:0;}
+.trow .lbl{color:var(--ink3);}
+.trow .val{font-weight:500;}
+
+/* ── ACTION GRID ── */
+.act-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.act-btn{padding:16px 10px;border-radius:var(--r);border:1.5px solid transparent;background:var(--surface2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .15s;font-size:14px;font-weight:500;color:var(--ink);}
+.act-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.act-btn:active:not(:disabled){transform:scale(.97);}
+.act-btn:disabled{opacity:.35;cursor:not-allowed;}
+.act-btn .icon{font-size:24px;line-height:1;}
+.a-login{border-color:rgba(5,150,105,.2);background:#f0fdf8;color:#065f46;}
+.a-logout{border-color:rgba(220,38,38,.15);background:#fff5f5;color:#991b1b;}
+.a-wfh{border-color:rgba(37,99,235,.15);background:#eff6ff;color:#1e40af;}
+.a-leave{border-color:rgba(217,119,6,.15);background:#fffbeb;color:#92400e;}
+
+/* ── HISTORY ── */
+.hist-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.hist-item:last-child{border-bottom:none;}
+.hdot{width:8px;height:8px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+.dg{background:var(--green)}.dr{background:var(--red)}.db{background:var(--blue)}.da{background:var(--amber)}.dgr{background:var(--ink3);}
+.ha{font-weight:500;}.ht{color:var(--ink3);margin-top:2px;font-family:'DM Mono',monospace;font-size:12px;}
+
+/* ── ADMIN TABS ── */
+.tabs{display:flex;gap:3px;background:var(--surface3);border-radius:var(--r-sm);padding:4px;margin-bottom:16px;overflow-x:auto;}
+.tab{flex-shrink:0;padding:8px 14px;border:none;border-radius:var(--r-xs);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--ink3);transition:all .15s;}
+.tab.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);}
+.tp{display:none;}.tp.on{display:block;}
+
+/* ── EMPLOYEE LIST ── */
+.emp-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.emp-row:last-child{border-bottom:none;}
+.emp-av{width:38px;height:38px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;}
+.emp-info{flex:1;min-width:0;}
+.emp-name{font-size:14px;font-weight:500;}
+.emp-meta{font-size:12px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:1px;}
+.emp-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--ink);}
+th{padding:11px 14px;text-align:left;font-weight:500;color:#fff;white-space:nowrap;}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--ink2);}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--surface2);}
+.tc{text-align:center;}.tn{font-family:'DM Mono',monospace;text-align:center;}
+
+/* ── LEAVE PANEL ── */
+#leave-panel{display:none;}
+#leave-panel.open{display:block;}
+
+/* ── HOLIDAY LIST ── */
+.hday-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.hday-row:last-child{border-bottom:none;}
+.hday-date{font-family:'DM Mono',monospace;font-size:13px;color:var(--ink3);min-width:100px;}
+.hday-name{flex:1;font-weight:500;}
+
+/* ── LEAVE REQUESTS ── */
+.lreq{border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;background:var(--surface);}
+.lreq:last-child{margin-bottom:0;}
+.lreq-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.lreq-name{font-weight:500;font-size:14px;}
+.lreq-meta{font-size:12px;color:var(--ink3);margin-top:2px;}
+.lreq-btns{display:flex;gap:6px;flex-shrink:0;}
+.approve-btn{padding:6px 12px;border-radius:var(--r-xs);border:none;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;background:var(--green-light);color:var(--green);transition:all .15s;}
+.approve-btn:hover{background:#d1fae5;}
+.reject-btn{padding:6px 12px;border-radius:var(--r-xs);border:none;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;background:var(--red-light);color:var(--red);transition:all .15s;}
+.reject-btn:hover{background:#fee2e2;}
+
+/* ── PIN SCREEN ── */
+#s-pin{background:#f0f4ff;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+#s-pin::before{content:'';position:absolute;top:-100px;right:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(79,70,229,.09) 0%,transparent 70%);pointer-events:none;}
+.pin-box{
+  background:#fff;border:1px solid rgba(79,70,229,.14);border-radius:20px;
+  padding:36px 28px;width:100%;max-width:320px;text-align:center;
+  box-shadow:0 8px 32px rgba(79,70,229,.10);position:relative;z-index:1;
+}
+.pin-box-logo{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+.pin-title{font-size:20px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.pin-sub{font-size:13px;color:var(--ink3);margin-bottom:26px;}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:26px;}
+.pdot{width:13px;height:13px;border-radius:50%;border:2px solid var(--surface3);background:transparent;transition:all .18s;}
+.pdot.on{background:var(--accent);border-color:var(--accent);}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:10px;}
+.pkey{
+  padding:15px;border-radius:10px;border:1.5px solid var(--border);
+  background:var(--surface2);color:var(--ink);font-size:18px;font-weight:500;
+  cursor:pointer;font-family:'DM Mono',monospace;transition:all .13s;
+}
+.pkey:hover{background:var(--accent-light);border-color:rgba(79,70,229,.25);color:var(--accent);}
+.pkey:active{transform:scale(.93);}
+.perr{color:var(--red);font-size:13px;margin-top:8px;min-height:18px;}
+.back-lnk{color:var(--ink3);font-size:13px;cursor:pointer;margin-top:14px;display:inline-block;}
+.back-lnk:hover{color:var(--ink2);}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:11px 22px;border-radius:30px;font-size:13px;font-weight:500;transition:transform .25s cubic-bezier(.34,1.56,.64,1);z-index:9999;white-space:nowrap;pointer-events:none;box-shadow:var(--shadow-md);}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:28px 16px;color:var(--ink3);font-size:14px;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.red-text{color:var(--red);}
+.green-text{color:var(--green);}
+.muted{color:var(--ink3);}
+.mono{font-family:'DM Mono',monospace;}
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:42px;}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:4px;}
+.notice{background:var(--amber-light);border:1px solid rgba(217,119,6,.25);border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:#92400e;margin-bottom:14px;}
+.notice strong{display:block;margin-bottom:2px;}
+</style>
+</head>
+<body>
+
+<!-- ═══ LANDING ═══ -->
+<div id="s-landing" class="screen active">
+  <div class="land-wrap">
+    <div class="land-header">
+      <div class="land-mark">📋</div>
+      <div class="land-company">Commodities Control</div>
+      <div class="land-title">Attendance Tracker</div>
+      <div class="land-tagline">Simple, reliable team attendance management</div>
+      <div class="land-divider"></div>
+      <div class="land-cta-label">Continue as</div>
+      <button class="lbtn lbtn-emp" onclick="go('s-emp-login')">
+        <div class="lbtn-icon">👤</div>
+        <div class="lbtn-text">
+          <div class="lbtn-title">Employee</div>
+          <div class="lbtn-sub">Mark attendance, apply leave</div>
+        </div>
+        <span class="lbtn-arr">›</span>
+      </button>
+      <button class="lbtn lbtn-adm" onclick="go('s-pin')">
+        <div class="lbtn-icon">🔐</div>
+        <div class="lbtn-text">
+          <div class="lbtn-title">Admin</div>
+          <div class="lbtn-sub">Manage team, approve leaves, view reports</div>
+        </div>
+        <span class="lbtn-arr">›</span>
+      </button>
+    </div>
+    <div class="land-footer">Commodities Control &copy; 2025 &nbsp;·&nbsp; Internal Use Only</div>
+  </div>
+</div>
+
+<!-- ═══ EMPLOYEE LOGIN ═══ -->
+<div id="s-emp-login" class="screen">
+  <div class="topbar">
+    <button class="tb-back" onclick="go('s-landing')">←</button>
+    <div class="tb-info"><div class="tb-title">Employee Login</div></div>
+  </div>
+  <div class="content" style="display:flex;flex-direction:column;justify-content:center;flex:1;padding-top:32px;">
+    <div class="card">
+      <div class="card-label">Sign In</div>
+      <div class="fg">
+        <label>Username</label>
+        <input id="el-user" type="text" placeholder="Enter your username" autocomplete="username"/>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <div class="pw-wrap">
+          <input id="el-pass" type="password" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')empLogin()"/>
+          <button class="pw-toggle" onclick="togglePw('el-pass',this)">👁</button>
+        </div>
+      </div>
+      <div id="el-err" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;"></div>
+      <button class="btn btn-primary" onclick="empLogin()">Sign In →</button>
+    </div>
+    <p style="text-align:center;font-size:13px;color:var(--ink3);margin-top:12px;">Your credentials are set by your admin.</p>
+  </div>
+</div>
+
+<!-- ═══ EMPLOYEE DASHBOARD ═══ -->
+<div id="s-emp" class="screen">
+  <div class="topbar">
+    <div class="tb-info">
+      <div class="tb-title" id="emp-tb-name">Employee</div>
+      <div class="tb-sub" id="emp-tb-date"></div>
+    </div>
+    <div class="tb-right">
+      <div class="avatar" id="emp-av">AB</div>
+      <button class="exit-btn" onclick="empSignOut()">Sign out</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="stat-row cols2">
+      <div class="stat-box">
+        <div class="stat-val" id="emp-stat-present">0</div>
+        <div class="stat-lbl">Present this month</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="emp-stat-hours">0h 0m</div>
+        <div class="stat-lbl">Hours today</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Today</div>
+      <div class="trow"><span class="lbl">Status</span><span id="emp-status-badge" class="badge bg-amber">Not Marked</span></div>
+      <div class="trow"><span class="lbl">Login</span><span class="val mono" id="emp-login-t">--:--</span></div>
+      <div class="trow"><span class="lbl">Logout</span><span class="val mono" id="emp-logout-t">--:--</span></div>
+      <div class="trow"><span class="lbl">Mode</span><span class="val" id="emp-mode">--</span></div>
+    </div>
+
+    <div id="holiday-notice" class="notice hidden">
+      <strong>🎉 Holiday Today</strong>
+      <span id="holiday-notice-name"></span> — No attendance required.
+    </div>
+
+    <div class="card">
+      <div class="card-label">Mark Attendance</div>
+      <div class="act-grid">
+        <button class="act-btn a-login" id="btn-login" onclick="mark('LOGIN')">
+          <span class="icon">🟢</span>Login
+        </button>
+        <button class="act-btn a-logout" id="btn-logout" onclick="mark('LOGOUT')" disabled>
+          <span class="icon">🔴</span>Logout
+        </button>
+        <button class="act-btn a-wfh" id="btn-wfh" onclick="mark('WFH')">
+          <span class="icon">🏠</span>Work From Home
+        </button>
+        <button class="act-btn a-leave" onclick="openLeave()">
+          <span class="icon">📅</span>Apply Leave
+        </button>
+      </div>
+    </div>
+
+    <!-- Leave form -->
+    <div class="card" id="leave-panel">
+      <div class="card-label">Leave Application</div>
+      <div class="fg-row">
+        <div class="fg"><label>From</label><input type="date" id="lv-from"/></div>
+        <div class="fg"><label>To</label><input type="date" id="lv-to"/></div>
+      </div>
+      <div class="fg">
+        <label>Leave Type</label>
+        <select id="lv-type">
+          <option>Sick Leave</option><option>Casual Leave</option>
+          <option>Earned Leave</option><option>Unpaid Leave</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fg"><label>Reason</label><textarea id="lv-reason" placeholder="Brief reason..."></textarea></div>
+      <button class="btn btn-primary" onclick="submitLeave()">Submit Request</button>
+      <button class="btn btn-ghost" onclick="closeLeave()">Cancel</button>
+    </div>
+
+    <!-- My leave requests -->
+    <div class="card">
+      <div class="card-label">My Leave Requests</div>
+      <div id="emp-leaves"><div class="empty">No leave requests</div></div>
+    </div>
+
+    <!-- Holidays -->
+    <div class="card">
+      <div class="card-label">Upcoming Holidays</div>
+      <div id="emp-holidays"><div class="empty">No holidays listed</div></div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-label">Today's Activity</div>
+      <div id="emp-hist"><div class="empty">No activity yet</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ ADMIN PIN ═══ -->
+<div id="s-pin" class="screen">
+  <div class="pin-box">
+    <div class="pin-box-logo">Commodities Control</div>
+    <div class="pin-title">Admin Access</div>
+    <div class="pin-sub">Enter your 4-digit PIN to continue</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pdot" id="pd0"></div><div class="pdot" id="pd1"></div>
+      <div class="pdot" id="pd2"></div><div class="pdot" id="pd3"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pkey" onclick="pk('1')">1</button><button class="pkey" onclick="pk('2')">2</button><button class="pkey" onclick="pk('3')">3</button>
+      <button class="pkey" onclick="pk('4')">4</button><button class="pkey" onclick="pk('5')">5</button><button class="pkey" onclick="pk('6')">6</button>
+      <button class="pkey" onclick="pk('7')">7</button><button class="pkey" onclick="pk('8')">8</button><button class="pkey" onclick="pk('9')">9</button>
+      <button class="pkey" style="font-size:14px;color:#71717a" onclick="pc()">⌫</button>
+      <button class="pkey" onclick="pk('0')">0</button>
+      <button class="pkey" style="background:var(--accent);border-color:var(--accent)" onclick="ps()">✓</button>
+    </div>
+    <div class="perr" id="perr"></div>
+    <span class="back-lnk" onclick="go('s-landing')">← Back</span>
+  </div>
+</div>
+
+<!-- ═══ ADMIN DASHBOARD ═══ -->
+<div id="s-admin" class="screen">
+  <div class="topbar">
+    <div class="tb-info">
+      <div class="tb-title">Admin Panel</div>
+      <div class="tb-sub" id="adm-date"></div>
+    </div>
+    <div class="tb-right">
+      <button class="exit-btn" style="color:var(--red)" onclick="adminOut()">Logout</button>
+    </div>
+  </div>
+  <div class="content content-wide">
+
+    <div class="stat-row cols4">
+      <div class="stat-box"><div class="stat-val" id="as-total">0</div><div class="stat-lbl">Employees</div></div>
+      <div class="stat-box"><div class="stat-val green-text" id="as-present">0</div><div class="stat-lbl">Present Today</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--amber)" id="as-pending">0</div><div class="stat-lbl">Pending Leaves</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--blue)" id="as-wfh">0</div><div class="stat-lbl">WFH Today</div></div>
+    </div>
+
+    <div class="tabs" id="admin-tabs">
+      <button class="tab on" onclick="switchTab('tp-employees')">👥 Employees</button>
+      <button class="tab" onclick="switchTab('tp-leaves')">📋 Leave Requests</button>
+      <button class="tab" onclick="switchTab('tp-report')">📊 Monthly Report</button>
+      <button class="tab" onclick="switchTab('tp-log')">🗒 Activity Log</button>
+      <button class="tab" onclick="switchTab('tp-holidays')">🎉 Holidays</button>
+    </div>
+
+    <!-- TAB: Employees -->
+    <div id="tp-employees" class="tp on">
+      <div class="card">
+        <div class="card-label">Add New Employee</div>
+        <div class="fg-row">
+          <div class="fg"><label>Full Name</label><input id="ae-name" type="text" placeholder="e.g. Rahul Sharma"/></div>
+          <div class="fg"><label>Employee ID</label><input id="ae-id" type="text" placeholder="e.g. EMP007"/></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>Username</label><input id="ae-user" type="text" placeholder="e.g. rahul.sharma"/></div>
+          <div class="fg">
+            <label>Password</label>
+            <div class="pw-wrap">
+              <input id="ae-pass" type="password" placeholder="Set password"/>
+              <button class="pw-toggle" onclick="togglePw('ae-pass',this)">👁</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addEmp()">+ Add Employee</button>
+      </div>
+      <div class="card">
+        <div class="card-label">All Employees (<span id="emp-count">0</span>)</div>
+        <div id="emp-list"><div class="empty">No employees added yet</div></div>
+      </div>
+    </div>
+
+    <!-- TAB: Leave Requests -->
+    <div id="tp-leaves" class="tp">
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <button class="badge bg-purple" style="cursor:pointer;border:none" onclick="setLeaveFilter('all',this)">All</button>
+          <button class="badge bg-amber" style="cursor:pointer;border:none" onclick="setLeaveFilter('Pending',this)">Pending</button>
+          <button class="badge bg-green" style="cursor:pointer;border:none" onclick="setLeaveFilter('Approved',this)">Approved</button>
+          <button class="badge bg-red" style="cursor:pointer;border:none" onclick="setLeaveFilter('Rejected',this)">Rejected</button>
+        </div>
+        <div id="leave-requests"><div class="empty">No leave requests</div></div>
+      </div>
+    </div>
+
+    <!-- TAB: Monthly Report -->
+    <div id="tp-report" class="tp">
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <select id="rpt-month" onchange="buildReport()" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:13px;background:var(--surface);outline:none;"></select>
+        <select id="rpt-year" onchange="buildReport()" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:13px;background:var(--surface);outline:none;"></select>
+      </div>
+      <div class="card" style="padding:0;">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Employee</th><th class="tc">Present</th><th class="tc">Absent</th>
+              <th class="tc">WFH</th><th class="tc">Leave</th><th class="tc">Holidays</th>
+              <th class="tc">Late</th><th class="tc">Hours</th>
+            </tr></thead>
+            <tbody id="rpt-body"><tr><td colspan="8" class="empty">Select month to view</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Activity Log -->
+    <div id="tp-log" class="tp">
+      <div class="card">
+        <div class="fg-row" style="margin-bottom:12px;">
+          <div class="fg" style="margin:0;"><label>Date</label><input type="date" id="log-date" onchange="buildLog()"/></div>
+          <div class="fg" style="margin:0;"><label>Employee</label>
+            <select id="log-emp" onchange="buildLog()"><option value="">All Employees</option></select>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="badge bg-purple" style="cursor:pointer;border:none" onclick="setLogFilter('ALL',this)">All</button>
+          <button class="badge bg-green" style="cursor:pointer;border:none" onclick="setLogFilter('LOGIN',this)">Login</button>
+          <button class="badge bg-red" style="cursor:pointer;border:none" onclick="setLogFilter('LOGOUT',this)">Logout</button>
+          <button class="badge bg-blue" style="cursor:pointer;border:none" onclick="setLogFilter('WFH',this)">WFH</button>
+          <button class="badge bg-amber" style="cursor:pointer;border:none" onclick="setLogFilter('LEAVE',this)">Leave</button>
+        </div>
+        <div id="log-list"><div class="empty">Select a date</div></div>
+      </div>
+    </div>
+
+    <!-- TAB: Holidays -->
+    <div id="tp-holidays" class="tp">
+      <div class="card">
+        <div class="card-label">Add Holiday</div>
+        <div class="fg-row">
+          <div class="fg"><label>Date</label><input type="date" id="hd-date"/></div>
+          <div class="fg"><label>Holiday Name</label><input id="hd-name" type="text" placeholder="e.g. Diwali"/></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addHoliday()">+ Add Holiday</button>
+      </div>
+      <div class="card">
+        <div class="card-label">Holiday List (<span id="hd-count">0</span>)</div>
+        <div id="hd-list"><div class="empty">No holidays added</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const ADMIN_PIN      = "1705";   // Change this!
+const LATE_THRESHOLD = "09:30";  // Login after this = Late
+const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwuPf-qUqpITTjNiqmKR4lekgFFvZlVyBeD1c_n0CBXZJ9eMPXORwTFdw_316UY20d9/exec";
+
+// ═══════════════════════════════════════
+// DATA HELPERS
+// ═══════════════════════════════════════
+const LS = {
+  get:(k,d=[])=>{ try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;} },
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
+  del:(k)=>localStorage.removeItem(k)
+};
+const getEmps     = ()=> LS.get('att_employees',[]);
+const setEmps     = v => LS.set('att_employees',v);
+const getLogs     = ()=> LS.get('att_logs',[]);
+const setLogs     = v => LS.set('att_logs',v);
+const getLeaves   = ()=> LS.get('att_leaves',[]);
+const setLeaves   = v => LS.set('att_leaves',v);
+const getHolidays = ()=> LS.get('att_holidays',[]);
+const setHolidays = v => LS.set('att_holidays',v);
+
+// ═══════════════════════════════════════
+// SCREEN NAV
+// ═══════════════════════════════════════
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+let currentEmp = null;
+let logFilter  = 'ALL';
+let leaveFilter = 'all';
+
+function init(){
+  const saved = LS.get('att_session', null);
+  if(saved && saved.user){
+    const emps = getEmps();
+    const emp = emps.find(e=>e.username===saved.user);
+    if(emp){ currentEmp=emp; renderEmpDash(); go('s-emp'); return; }
+  }
+  go('s-landing');
+}
+
+// ═══════════════════════════════════════
+// PASSWORD TOGGLE
+// ═══════════════════════════════════════
+function togglePw(id,btn){
+  const inp = document.getElementById(id);
+  inp.type = inp.type==='password' ? 'text' : 'password';
+  btn.textContent = inp.type==='password' ? '👁' : '🙈';
+}
+
+// ═══════════════════════════════════════
+// EMPLOYEE LOGIN
+// ═══════════════════════════════════════
+function empLogin(){
+  const user = document.getElementById('el-user').value.trim();
+  const pass = document.getElementById('el-pass').value;
+  const errEl = document.getElementById('el-err');
+  errEl.style.display='none';
+  if(!user||!pass){ showErr(errEl,'Please enter username and password.'); return; }
+  const emps = getEmps();
+  const emp  = emps.find(e=>e.username===user && e.password===pass);
+  if(!emp){ showErr(errEl,'Incorrect username or password.'); return; }
+  currentEmp = emp;
+  LS.set('att_session',{user:emp.username});
+  document.getElementById('el-user').value='';
+  document.getElementById('el-pass').value='';
+  renderEmpDash();
+  go('s-emp');
+}
+function showErr(el,msg){ el.textContent=msg; el.style.display='block'; }
+
+function empSignOut(){
+  currentEmp=null;
+  LS.del('att_session');
+  go('s-landing');
+}
+
+// ═══════════════════════════════════════
+// EMPLOYEE DASHBOARD
+// ═══════════════════════════════════════
+function renderEmpDash(){
+  if(!currentEmp) return;
+  const name  = currentEmp.name;
+  const today = getToday();
+  const init  = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+
+  document.getElementById('emp-tb-name').textContent = name;
+  document.getElementById('emp-tb-date').textContent = fmtLong(today);
+  document.getElementById('emp-av').textContent = init;
+
+  // Holiday check
+  const holidays = getHolidays();
+  const todayHoliday = holidays.find(h=>h.date===today);
+  const hdNotice = document.getElementById('holiday-notice');
+  if(todayHoliday){
+    hdNotice.classList.remove('hidden');
+    document.getElementById('holiday-notice-name').textContent = todayHoliday.name;
+  } else {
+    hdNotice.classList.add('hidden');
+  }
+
+  // Today's logs
+  const todayLogs = getLogs().filter(l=>l.emp===name && l.date===today);
+  const loginEvt  = todayLogs.find(l=>l.type==='LOGIN');
+  const logoutEvt = todayLogs.find(l=>l.type==='LOGOUT');
+  const wfhEvt    = todayLogs.find(l=>l.type==='WFH');
+
+  // Status
+  const badge = document.getElementById('emp-status-badge');
+  if(logoutEvt)     { badge.textContent='Completed';       badge.className='badge bg-green'; }
+  else if(wfhEvt)   { badge.textContent='Work From Home';  badge.className='badge bg-blue';  }
+  else if(loginEvt) { badge.textContent='Working';         badge.className='badge bg-green'; }
+  else              { badge.textContent='Not Marked';      badge.className='badge bg-amber'; }
+
+  document.getElementById('emp-login-t').textContent  = loginEvt  ? loginEvt.time  : '--:--';
+  document.getElementById('emp-logout-t').textContent = logoutEvt ? logoutEvt.time : '--:--';
+  document.getElementById('emp-mode').textContent     = wfhEvt ? 'Work From Home' : loginEvt ? 'Office' : '--';
+
+  // Hours today
+  if(loginEvt){
+    const endT = logoutEvt ? logoutEvt.time : fmtTime(new Date());
+    document.getElementById('emp-stat-hours').textContent = minsToHM(diffMins(loginEvt.time,endT));
+  } else {
+    document.getElementById('emp-stat-hours').textContent = '0h 0m';
+  }
+
+  // Present days this month
+  const monthLogs = getLogs().filter(l=>l.emp===name && l.date.startsWith(today.substring(0,7)));
+  const presentDays = new Set(monthLogs.filter(l=>l.type==='LOGIN'||l.type==='WFH').map(l=>l.date)).size;
+  document.getElementById('emp-stat-present').textContent = presentDays;
+
+  // Buttons
+  document.getElementById('btn-login').disabled  = !!(loginEvt||wfhEvt);
+  document.getElementById('btn-wfh').disabled    = !!(loginEvt||wfhEvt);
+  document.getElementById('btn-logout').disabled = !(loginEvt && !logoutEvt);
+
+  // History
+  renderEmpHist(todayLogs);
+
+  // My leave requests
+  renderMyLeaves(name);
+
+  // Upcoming holidays
+  renderEmpHolidays();
+}
+
+function renderEmpHist(logs){
+  const el = document.getElementById('emp-hist');
+  if(!logs.length){ el.innerHTML='<div class="empty">No activity yet</div>'; return; }
+  const dc={LOGIN:'dg',LOGOUT:'dr',WFH:'db',LEAVE:'da'};
+  const lc={LOGIN:'Logged In',LOGOUT:'Logged Out',WFH:'Marked WFH',LEAVE:'Leave Applied'};
+  el.innerHTML=[...logs].reverse().map(l=>`
+    <div class="hist-item">
+      <div class="hdot ${dc[l.type]||'dgr'}"></div>
+      <div><div class="ha">${lc[l.type]||l.type}</div><div class="ht">${l.time}${l.note?' · '+l.note:''}</div></div>
+    </div>`).join('');
+}
+
+function renderMyLeaves(name){
+  const el   = document.getElementById('emp-leaves');
+  const reqs = getLeaves().filter(r=>r.emp===name).sort((a,b)=>b.appliedDate.localeCompare(a.appliedDate)).slice(0,5);
+  if(!reqs.length){ el.innerHTML='<div class="empty">No leave requests</div>'; return; }
+  const cls  = {Pending:'bg-amber',Approved:'bg-green',Rejected:'bg-red'};
+  el.innerHTML = reqs.map(r=>`
+    <div class="hist-item">
+      <div class="hdot da"></div>
+      <div style="flex:1">
+        <div class="ha">${r.leaveType} <span class="badge ${cls[r.status]||'bg-gray'}" style="margin-left:4px">${r.status}</span></div>
+        <div class="ht">${r.from} → ${r.to}${r.reason?' · '+r.reason:''}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderEmpHolidays(){
+  const el  = document.getElementById('emp-holidays');
+  const today = getToday();
+  const list  = getHolidays().filter(h=>h.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+  if(!list.length){ el.innerHTML='<div class="empty">No upcoming holidays</div>'; return; }
+  el.innerHTML = list.map(h=>`
+    <div class="hday-row">
+      <div class="hday-date">${fmtShort(h.date)}</div>
+      <div class="hday-name">🎉 ${h.name}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+// MARK ATTENDANCE
+// ═══════════════════════════════════════
+function mark(type){
+  const now   = new Date();
+  const entry = { emp:currentEmp.name, empId:currentEmp.id||'N/A', date:getToday(), time:fmtTime(now), type, ts:now.toISOString(), note:'' };
+  const logs  = getLogs();
+  logs.push(entry);
+  setLogs(logs);
+  toast(type==='LOGIN'?'✓ Login recorded':type==='LOGOUT'?'✓ Logout recorded':'✓ WFH recorded');
+  sendSheet(entry);
+  renderEmpDash();
+}
+
+// ═══════════════════════════════════════
+// LEAVE
+// ═══════════════════════════════════════
+function openLeave(){
+  const p = document.getElementById('leave-panel');
+  p.classList.add('open');
+  const t = getToday();
+  document.getElementById('lv-from').value=t;
+  document.getElementById('lv-to').value=t;
+  p.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function closeLeave(){ document.getElementById('leave-panel').classList.remove('open'); }
+
+function submitLeave(){
+  const from   = document.getElementById('lv-from').value;
+  const to     = document.getElementById('lv-to').value;
+  const type   = document.getElementById('lv-type').value;
+  const reason = document.getElementById('lv-reason').value.trim();
+  if(!from||!to){ toast('Please fill both dates'); return; }
+  if(from>to){ toast('From date must be before To date'); return; }
+
+  const req = {
+    id: Date.now().toString(),
+    emp: currentEmp.name,
+    empId: currentEmp.id||'N/A',
+    leaveType: type,
+    from, to, reason,
+    status: 'Pending',
+    appliedDate: getToday(),
+    appliedTime: fmtTime(new Date()),
+    ts: new Date().toISOString()
+  };
+  const leaves = getLeaves();
+  leaves.push(req);
+  setLeaves(leaves);
+
+  // also log it
+  const logs = getLogs();
+  logs.push({ emp:currentEmp.name, empId:currentEmp.id||'N/A', date:getToday(), time:req.appliedTime, type:'LEAVE', ts:req.ts, note:`${type}: ${from}→${to}` });
+  setLogs(logs);
+
+  document.getElementById('lv-reason').value='';
+  closeLeave();
+  toast('✓ Leave request submitted — pending admin approval');
+  sendSheet({...req, type:'LEAVE_REQUEST'});
+  renderEmpDash();
+}
+
+// ═══════════════════════════════════════
+// PIN
+// ═══════════════════════════════════════
+let pinVal='';
+function pk(d){ if(pinVal.length>=4)return; pinVal+=d; updDots(); if(pinVal.length===4)setTimeout(ps,180); }
+function pc(){ pinVal=pinVal.slice(0,-1); updDots(); document.getElementById('perr').textContent=''; }
+function updDots(){ for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('on',i<pinVal.length); }
+function ps(){
+  if(pinVal===ADMIN_PIN){
+    pinVal=''; updDots();
+    document.getElementById('perr').textContent='';
+    loadAdmin(); go('s-admin');
+  } else {
+    document.getElementById('perr').textContent='Incorrect PIN. Try again.';
+    pinVal=''; updDots();
+  }
+}
+function adminOut(){ go('s-landing'); }
+
+// ═══════════════════════════════════════
+// ADMIN: LOAD
+// ═══════════════════════════════════════
+function loadAdmin(){
+  document.getElementById('adm-date').textContent = fmtLong(getToday());
+  renderEmpList();
+  updateAdminStats();
+  setupRptControls();
+  buildReport();
+  document.getElementById('log-date').value = getToday();
+  buildLog();
+  renderLeaveRequests();
+  renderHolidayList();
+  populateLogEmpSelect();
+}
+
+function updateAdminStats(){
+  const emps  = getEmps();
+  const today = getToday();
+  const logs  = getLogs().filter(l=>l.date===today);
+  const present = new Set(logs.filter(l=>l.type==='LOGIN').map(l=>l.emp)).size;
+  const wfh     = new Set(logs.filter(l=>l.type==='WFH').map(l=>l.emp)).size;
+  const pending = getLeaves().filter(l=>l.status==='Pending').length;
+  document.getElementById('as-total').textContent   = emps.length;
+  document.getElementById('as-present').textContent = present;
+  document.getElementById('as-wfh').textContent     = wfh;
+  document.getElementById('as-pending').textContent = pending;
+}
+
+// ═══════════════════════════════════════
+// ADMIN: EMPLOYEES
+// ═══════════════════════════════════════
+function renderEmpList(){
+  const emps = getEmps();
+  document.getElementById('emp-count').textContent = emps.length;
+  const el = document.getElementById('emp-list');
+  if(!emps.length){ el.innerHTML='<div class="empty">No employees yet</div>'; return; }
+  el.innerHTML = emps.map((e,i)=>`
+    <div class="emp-row">
+      <div class="emp-av">${e.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()}</div>
+      <div class="emp-info">
+        <div class="emp-name">${e.name}</div>
+        <div class="emp-meta">${e.id||'No ID'} · @${e.username}</div>
+      </div>
+      <div class="emp-actions">
+        <button class="btn btn-primary btn-xs" onclick="resetPass(${i})">Reset Pass</button>
+        <button class="btn btn-danger btn-xs" onclick="delEmp(${i})">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function addEmp(){
+  const name = document.getElementById('ae-name').value.trim();
+  const id   = document.getElementById('ae-id').value.trim();
+  const user = document.getElementById('ae-user').value.trim().toLowerCase();
+  const pass = document.getElementById('ae-pass').value;
+  if(!name||!user||!pass){ toast('Name, username and password are required'); return; }
+  const emps = getEmps();
+  if(emps.find(e=>e.username===user)){ toast('Username already exists'); return; }
+  emps.push({ name, id:id||'', username:user, password:pass, added:getToday() });
+  setEmps(emps);
+  document.getElementById('ae-name').value='';
+  document.getElementById('ae-id').value='';
+  document.getElementById('ae-user').value='';
+  document.getElementById('ae-pass').value='';
+  renderEmpList();
+  updateAdminStats();
+  populateLogEmpSelect();
+  toast(`✓ ${name} added`);
+}
+
+function delEmp(i){
+  const emps = getEmps();
+  if(!confirm(`Remove ${emps[i].name}? Their attendance data will be kept.`)) return;
+  const name = emps[i].name;
+  emps.splice(i,1);
+  setEmps(emps);
+  renderEmpList();
+  updateAdminStats();
+  toast(`${name} removed`);
+}
+
+function resetPass(i){
+  const emps    = getEmps();
+  const newPass = prompt(`Enter new password for ${emps[i].name}:`);
+  if(!newPass||!newPass.trim()) return;
+  emps[i].password = newPass.trim();
+  setEmps(emps);
+  toast(`✓ Password updated for ${emps[i].name}`);
+}
+
+function populateLogEmpSelect(){
+  const sel  = document.getElementById('log-emp');
+  const emps = getEmps();
+  sel.innerHTML = '<option value="">All Employees</option>' +
+    emps.map(e=>`<option value="${e.name}">${e.name}</option>`).join('');
+}
+
+// ═══════════════════════════════════════
+// ADMIN: LEAVE REQUESTS
+// ═══════════════════════════════════════
+function setLeaveFilter(f, btn){
+  leaveFilter = f;
+  document.querySelectorAll('#tp-leaves .badge').forEach(b=>b.style.opacity='.5');
+  btn.style.opacity='1';
+  renderLeaveRequests();
+}
+
+function renderLeaveRequests(){
+  const el = document.getElementById('leave-requests');
+  let reqs = getLeaves().sort((a,b)=>b.ts.localeCompare(a.ts));
+  if(leaveFilter!=='all') reqs = reqs.filter(r=>r.status===leaveFilter);
+  if(!reqs.length){ el.innerHTML='<div class="empty">No requests</div>'; return; }
+  const sc = {Pending:'bg-amber',Approved:'bg-green',Rejected:'bg-red'};
+  el.innerHTML = reqs.map(r=>`
+    <div class="lreq">
+      <div class="lreq-top">
+        <div>
+          <div class="lreq-name">${r.emp} <span class="badge ${sc[r.status]}">${r.status}</span></div>
+          <div class="lreq-meta">${r.leaveType} · ${r.from} → ${r.to} · Applied ${r.appliedDate}</div>
+          ${r.reason?`<div class="lreq-meta" style="margin-top:4px;color:var(--ink2)">"${r.reason}"</div>`:''}
+        </div>
+        ${r.status==='Pending'?`
+        <div class="lreq-btns">
+          <button class="approve-btn" onclick="actLeave('${r.id}','Approved')">✓ Approve</button>
+          <button class="reject-btn"  onclick="actLeave('${r.id}','Rejected')">✕ Reject</button>
+        </div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function actLeave(id, status){
+  const leaves = getLeaves();
+  const idx    = leaves.findIndex(r=>r.id===id);
+  if(idx===-1) return;
+  leaves[idx].status        = status;
+  leaves[idx].actionDate    = getToday();
+  setLeaves(leaves);
+  updateAdminStats();
+  renderLeaveRequests();
+  toast(`✓ Leave ${status.toLowerCase()}`);
+  sendSheet({ type:'LEAVE_ACTION', leaveId:id, status, emp:leaves[idx].emp, date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'', empId:leaves[idx].empId });
+}
+
+// ═══════════════════════════════════════
+// ADMIN: HOLIDAYS
+// ═══════════════════════════════════════
+function addHoliday(){
+  const date = document.getElementById('hd-date').value;
+  const name = document.getElementById('hd-name').value.trim();
+  if(!date||!name){ toast('Fill both date and name'); return; }
+  const list = getHolidays();
+  if(list.find(h=>h.date===date)){ toast('Holiday already exists for this date'); return; }
+  list.push({date,name});
+  list.sort((a,b)=>a.date.localeCompare(b.date));
+  setHolidays(list);
+  document.getElementById('hd-date').value='';
+  document.getElementById('hd-name').value='';
+  renderHolidayList();
+  toast(`✓ ${name} added`);
+}
+
+function delHoliday(date){
+  const list = getHolidays().filter(h=>h.date!==date);
+  setHolidays(list);
+  renderHolidayList();
+  toast('Holiday removed');
+}
+
+function renderHolidayList(){
+  const el   = document.getElementById('hd-list');
+  const list = getHolidays();
+  document.getElementById('hd-count').textContent = list.length;
+  if(!list.length){ el.innerHTML='<div class="empty">No holidays added</div>'; return; }
+  el.innerHTML = list.map(h=>`
+    <div class="hday-row">
+      <div class="hday-date">${fmtShort(h.date)}</div>
+      <div class="hday-name">🎉 ${h.name}</div>
+      <button class="btn btn-danger btn-xs" onclick="delHoliday('${h.date}')">Remove</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+// ADMIN: MONTHLY REPORT
+// ═══════════════════════════════════════
+function setupRptControls(){
+  const ms   = document.getElementById('rpt-month');
+  const ys   = document.getElementById('rpt-year');
+  const mnms = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  ms.innerHTML = mnms.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+  const now  = new Date();
+  ms.value   = String(now.getMonth()+1).padStart(2,'0');
+  ys.innerHTML = '';
+  for(let y=now.getFullYear();y>=now.getFullYear()-3;y--) ys.innerHTML+=`<option>${y}</option>`;
+}
+
+function buildReport(){
+  const m      = document.getElementById('rpt-month').value;
+  const y      = document.getElementById('rpt-year').value;
+  const prefix = `${y}-${m}`;
+  const emps   = getEmps();
+  const logs   = getLogs().filter(l=>l.date.startsWith(prefix));
+  const leaves = getLeaves().filter(r=>r.from.startsWith(prefix)||r.to.startsWith(prefix));
+  const holidays = getHolidays().filter(h=>h.date.startsWith(prefix));
+
+  const dim    = new Date(y,parseInt(m),0).getDate();
+  let workDays = 0;
+  for(let d=1;d<=dim;d++) if(new Date(y,parseInt(m)-1,d).getDay()!==0) workDays++;
+  // subtract holidays
+  const hdDates = new Set(holidays.map(h=>h.date));
+  const effectiveWorkDays = workDays - hdDates.size;
+
+  const tbody = document.getElementById('rpt-body');
+  if(!emps.length){ tbody.innerHTML='<tr><td colspan="8" class="empty">No employees</td></tr>'; return; }
+
+  tbody.innerHTML = emps.map(e=>{
+    const el      = logs.filter(l=>l.emp===e.name);
+    const present = new Set(el.filter(l=>l.type==='LOGIN').map(l=>l.date));
+    const wfh     = new Set(el.filter(l=>l.type==='WFH').map(l=>l.date));
+
+    // Count approved leave days
+    const leaveDays = new Set();
+    leaves.filter(r=>r.emp===e.name&&r.status==='Approved').forEach(r=>{
+      let d=new Date(r.from), end=new Date(r.to);
+      while(d<=end){ const ds=d.toISOString().split('T')[0]; if(ds.startsWith(prefix)) leaveDays.add(ds); d.setDate(d.getDate()+1); }
+    });
+
+    const totalPresent = present.size + wfh.size;
+    const absent       = Math.max(0, effectiveWorkDays - totalPresent - leaveDays.size);
+
+    let late=0;
+    el.filter(l=>l.type==='LOGIN').forEach(l=>{ if(l.time>LATE_THRESHOLD) late++; });
+
+    let totalMins=0;
+    const loginMap={};
+    el.filter(l=>l.type==='LOGIN').forEach(l=>{ loginMap[l.date]=l.time; });
+    el.filter(l=>l.type==='LOGOUT').forEach(l=>{ if(loginMap[l.date]) totalMins+=diffMins(loginMap[l.date],l.time); });
+
+    return `<tr>
+      <td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div class="mono" style="font-size:11px;color:var(--ink3)">${e.id||''}</div></td>
+      <td class="tn" style="color:var(--green)">${totalPresent}</td>
+      <td class="tn" style="color:var(--red)">${absent}</td>
+      <td class="tn" style="color:var(--blue)">${wfh.size}</td>
+      <td class="tn" style="color:var(--amber)">${leaveDays.size}</td>
+      <td class="tn" style="color:var(--ink3)">${hdDates.size}</td>
+      <td class="tn" style="color:var(--amber)">${late}</td>
+      <td class="tn">${minsToHM(totalMins)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// ADMIN: ACTIVITY LOG
+// ═══════════════════════════════════════
+function setLogFilter(f,btn){
+  logFilter=f;
+  document.querySelectorAll('#tp-log .badge').forEach(b=>b.style.opacity='.5');
+  btn.style.opacity='1';
+  buildLog();
+}
+function buildLog(){
+  const date  = document.getElementById('log-date').value;
+  const emp   = document.getElementById('log-emp').value;
+  if(!date){ document.getElementById('log-list').innerHTML='<div class="empty">Select a date</div>'; return; }
+  let logs = getLogs().filter(l=>l.date===date);
+  if(emp)            logs = logs.filter(l=>l.emp===emp);
+  if(logFilter!=='ALL') logs = logs.filter(l=>l.type===logFilter);
+  logs.sort((a,b)=>b.time.localeCompare(a.time));
+  const el = document.getElementById('log-list');
+  if(!logs.length){ el.innerHTML='<div class="empty">No records for this filter</div>'; return; }
+  const dc={LOGIN:'dg',LOGOUT:'dr',WFH:'db',LEAVE:'da'};
+  const lc={LOGIN:'Login',LOGOUT:'Logout',WFH:'WFH',LEAVE:'Leave Applied'};
+  el.innerHTML = logs.map(l=>`
+    <div class="hist-item">
+      <div class="hdot ${dc[l.type]||'dgr'}"></div>
+      <div style="flex:1">
+        <div class="ha">${l.emp} <span style="color:var(--ink3);font-weight:400">— ${lc[l.type]||l.type}</span></div>
+        <div class="ht">${l.time}${l.note?' · '+l.note:''}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+function switchTab(id){
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  event.target.classList.add('on');
+  if(id==='tp-report')  buildReport();
+  if(id==='tp-log')     buildLog();
+  if(id==='tp-leaves')  renderLeaveRequests();
+  if(id==='tp-holidays')renderHolidayList();
+}
+
+// ═══════════════════════════════════════
+// GOOGLE SHEETS SYNC
+// ═══════════════════════════════════════
+async function sendSheet(payload){
+  if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') return;
+  try{
+    await fetch(SCRIPT_URL,{ method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  }catch(e){ console.warn('Sheet sync failed:',e); }
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function getToday(){ return new Date().toISOString().split('T')[0]; }
+function fmtTime(d){ return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}); }
+function fmtLong(s){ return new Date(s+'T12:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+function fmtShort(s){ return new Date(s+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+function diffMins(t1,t2){ const [h1,m1]=t1.split(':').map(Number),[h2,m2]=t2.split(':').map(Number); return Math.max(0,(h2*60+m2)-(h1*60+m1)); }
+function minsToHM(m){ return `${Math.floor(m/60)}h ${m%60}m`; }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+
+init();
+</script>
+</body>
+</html>

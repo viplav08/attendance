@@ -579,7 +579,7 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const ADMIN_PIN      = "1981";   // Change this!
+const ADMIN_PIN      = "3705";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
 const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbz5zuHwMmyttWQnYpsoIbj8hfgsamhwdqpXQq1XRvmdknw0VyKiCrm78Gnd-rTyW20/exec";
 
@@ -651,12 +651,13 @@ function showLoadingScreen(show){
 
 async function syncFromSheets(){
   if(SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+    // No sheet — load from localStorage backup
+    loadLogsFromLocal();
     dataLoaded = true;
     return;
   }
   try {
-    // GET requests work fine with CORS — no preflight needed
-    const url = SCRIPT_URL + '?action=fetchAll&t=' + Date.now();
+    const url  = SCRIPT_URL + '?action=fetchAll&t=' + Date.now();
     const res  = await fetch(url, { method:'GET' });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -665,13 +666,55 @@ async function syncFromSheets(){
     if(Array.isArray(data.logs))      DB.logs      = data.logs;
     if(Array.isArray(data.leaves))    DB.leaves    = data.leaves;
     if(Array.isArray(data.holidays))  DB.holidays  = data.holidays;
-    console.log('✓ Synced from Sheet — Employees:', DB.employees.length, '| Logs:', DB.logs.length, '| Holidays:', DB.holidays.length);
+
+    // Merge any local logs that are newer than what Sheet returned
+    // This handles the race condition where Sheet hasn't saved yet on refresh
+    mergeLocalLogs();
+
+    console.log('✓ Synced — Employees:', DB.employees.length, '| Logs:', DB.logs.length, '| Holidays:', DB.holidays.length);
     dataLoaded = true;
   } catch(e) {
     console.error('Sync failed:', e);
+    // Fall back to localStorage backup so app still works offline
+    loadLogsFromLocal();
     dataLoaded = true;
-    toast('⚠ Could not load data from server — working offline.');
+    toast('⚠ Could not reach server — showing cached data');
   }
+}
+
+// Save today's logs to localStorage as backup
+function saveLogsToLocal(){
+  const today    = getToday();
+  const todayLog = DB.logs.filter(l=>l.date===today);
+  localStorage.setItem('att_local_logs_'+today, JSON.stringify(todayLog));
+}
+
+// Load logs from localStorage backup into DB
+function loadLogsFromLocal(){
+  const today = getToday();
+  const saved = localStorage.getItem('att_local_logs_'+today);
+  if(saved){
+    const local = JSON.parse(saved);
+    local.forEach(l=>{ if(!DB.logs.find(x=>x.ts===l.ts && x.emp===l.emp && x.type===l.type)) DB.logs.push(l); });
+  }
+}
+
+// After Sheet sync, check if local backup has entries the Sheet doesn't yet
+function mergeLocalLogs(){
+  const today = getToday();
+  const saved = localStorage.getItem('att_local_logs_'+today);
+  if(!saved) return;
+  const local = JSON.parse(saved);
+  let merged = 0;
+  local.forEach(l=>{
+    const exists = DB.logs.find(x=>x.emp===l.emp && x.type===l.type && x.date===l.date && x.time===l.time);
+    if(!exists){
+      DB.logs.push(l);
+      merged++;
+      console.log('Merged local log into Sheet data:', l.type, l.emp, l.time);
+    }
+  });
+  if(merged > 0) console.log('✓ Merged', merged, 'local log(s) not yet in Sheet');
 }
 
 // Call this after any admin change to refresh data
@@ -739,8 +782,11 @@ function renderEmpDash(){
     hdNotice.classList.add('hidden');
   }
 
-  // Today's logs
-  const todayLogs = getLogs().filter(l=>l.emp===name && l.date===today);
+  // Today's logs — normalize both sides to be safe
+  const todayLogs = getLogs().filter(l =>
+    l.emp.trim() === name.trim() &&
+    normalizeDate(l.date) === today
+  );
   const loginEvt  = todayLogs.find(l=>l.type==='LOGIN');
   const logoutEvt = todayLogs.find(l=>l.type==='LOGOUT');
   const wfhEvt    = todayLogs.find(l=>l.type==='WFH');
@@ -766,7 +812,11 @@ function renderEmpDash(){
   }
 
   // Present days this month
-  const monthLogs = getLogs().filter(l=>l.emp===name && l.date.startsWith(today.substring(0,7)));
+  const monthPrefix = today.substring(0,7);
+  const monthLogs = getLogs().filter(l =>
+    l.emp.trim() === name.trim() &&
+    normalizeDate(l.date).startsWith(monthPrefix)
+  );
   const presentDays = new Set(monthLogs.filter(l=>l.type==='LOGIN'||l.type==='WFH').map(l=>l.date)).size;
   document.getElementById('emp-stat-present').textContent = presentDays;
 
@@ -827,21 +877,24 @@ function renderEmpHolidays(){
 // ═══════════════════════════════════════
 // MARK ATTENDANCE
 // ═══════════════════════════════════════
-function mark(type){
+async function mark(type){
   const now   = new Date();
   const entry = {
     emp:currentEmp.name, empId:currentEmp.id||'N/A',
     date:getToday(), time:fmtTime(now), type,
     ts:getISTTimestamp(), note:''
   };
-  // Add to in-memory DB immediately so buttons update at once
+  // 1. Add to in-memory DB immediately → buttons update instantly
   DB.logs.push(entry);
-  // Show correct button states right away
+  // 2. Save to localStorage as crash-safe backup
+  saveLogsToLocal();
+  // 3. Update UI immediately
   renderEmpDash();
-  const msgs = { LOGIN:'✓ Login recorded', LOGOUT:'✓ Logout recorded', WFH:'✓ WFH recorded' };
-  toast(msgs[type]||'✓ Done');
-  // Send to sheet in background — no need to wait
-  sendSheet(entry);
+  toast('Saving...');
+  // 4. Send to Sheet and WAIT for confirmation
+  const ok = await sendSheet(entry);
+  const msgs = { LOGIN:'✓ Login saved', LOGOUT:'✓ Logout saved', WFH:'✓ WFH saved' };
+  toast(ok ? (msgs[type]||'✓ Saved') : '⚠ Saved locally — will sync when online');
 }
 
 // ═══════════════════════════════════════
@@ -1219,19 +1272,19 @@ function switchTab(id){
 // ═══════════════════════════════════════
 // Uses GET with encoded payload — zero CORS issues, confirmed delivery
 async function sendSheet(payload, refreshAfter=false){
-  if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') return;
+  if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') return true;
   try{
-    // Use GET with encoded payload — most reliable approach with Google Apps Script
-    // Avoids all CORS/preflight issues entirely
     const encoded = encodeURIComponent(JSON.stringify(payload));
     const url = SCRIPT_URL + '?action=write&data=' + encoded + '&t=' + Date.now();
-    const res = await fetch(url, { method:'GET' });
+    const res  = await fetch(url, { method:'GET' });
     const json = await res.json();
-    console.log('✓ Sheet write OK:', payload.type, json);
+    if(json.status !== 'ok') throw new Error(json.msg||'Sheet error');
+    console.log('✓ Sheet write confirmed:', payload.type, json.time);
     if(refreshAfter) await syncFromSheets();
+    return true;
   } catch(e){
-    console.error('Sheet write failed:', e);
-    toast('⚠ Could not save to sheet. Check connection.');
+    console.error('✗ Sheet write failed:', e);
+    return false;
   }
 }
 

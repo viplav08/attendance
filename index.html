@@ -579,7 +579,7 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const ADMIN_PIN      = "5705";   // Change this!
+const ADMIN_PIN      = "6705";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
 const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbzV3LJTznoukjI-fjCdaEfA33IQAMNfLHA4dRvdWVe81NrSVgIiDv-vgQY6PMoGvHLY/exec";
 
@@ -800,7 +800,12 @@ function renderEmpDash(){
 
   // Holiday check — trim whitespace from stored dates to prevent false matches
   const holidays = getHolidays();
-  const todayHoliday = holidays.find(h=>h.date && normalizeDate(h.date)===today);
+  // Only match holidays with valid yyyy-mm-dd dates
+  const todayHoliday = holidays.find(h => {
+    if (!h.date) return false;
+    const nd = normalizeDate(h.date);
+    return nd && nd.length === 10 && nd === today;
+  });
   const hdNotice = document.getElementById('holiday-notice');
   if(todayHoliday){
     hdNotice.classList.remove('hidden');
@@ -1326,14 +1331,16 @@ function normalizeDate(raw) {
   if (!raw) return '';
   const s = String(raw).trim();
   if (!s || s === 'undefined' || s === 'null') return '';
-  // Already yyyy-mm-dd
+  // Already yyyy-mm-dd — return as-is (safest, no timezone issues)
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-  // Try native Date parsing (handles m/d/yyyy, dd-mm-yyyy etc)
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) {
-    return d.toLocaleDateString('en-CA', { timeZone:'Asia/Kolkata' });
+  // Handle d/m/yyyy or m/d/yyyy (Google Sheets locale formats)
+  const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) {
+    const [_, a, b, y] = slash;
+    // Assume dd/mm/yyyy (Indian locale)
+    return y + '-' + b.padStart(2,'0') + '-' + a.padStart(2,'0');
   }
-  return s.substring(0, 10);
+  return '';  // Return empty for anything we can't safely parse
 }
 
 // Normalize ANY time format → HH:MM

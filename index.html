@@ -579,7 +579,7 @@ tbody tr:hover td{background:var(--surface2);}
 // ═══════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════
-const ADMIN_PIN      = "2502";   // Change this!
+const ADMIN_PIN      = "1981";   // Change this!
 const LATE_THRESHOLD = "09:30";  // Login after this = Late
 const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbz5zuHwMmyttWQnYpsoIbj8hfgsamhwdqpXQq1XRvmdknw0VyKiCrm78Gnd-rTyW20/exec";
 
@@ -834,12 +834,14 @@ function mark(type){
     date:getToday(), time:fmtTime(now), type,
     ts:getISTTimestamp(), note:''
   };
-  const logs = getLogs();
-  logs.push(entry);
-  setLogs(logs);
-  toast(type==='LOGIN'?'✓ Login recorded':type==='LOGOUT'?'✓ Logout recorded':'✓ WFH recorded');
-  sendSheet(entry);
+  // Add to in-memory DB immediately so buttons update at once
+  DB.logs.push(entry);
+  // Show correct button states right away
   renderEmpDash();
+  const msgs = { LOGIN:'✓ Login recorded', LOGOUT:'✓ Logout recorded', WFH:'✓ WFH recorded' };
+  toast(msgs[type]||'✓ Done');
+  // Send to sheet in background — no need to wait
+  sendSheet(entry);
 }
 
 // ═══════════════════════════════════════
@@ -874,14 +876,9 @@ function submitLeave(){
     appliedTime: fmtTime(new Date()),
     ts: getISTTimestamp()
   };
-  const leaves = getLeaves();
-  leaves.push(req);
-  setLeaves(leaves);
-
-  // also log it
-  const logs = getLogs();
-  logs.push({ emp:currentEmp.name, empId:currentEmp.id||'N/A', date:getToday(), time:req.appliedTime, type:'LEAVE', ts:req.ts, note:`${type}: ${from}→${to}` });
-  setLogs(logs);
+  // Add to in-memory DB immediately
+  DB.leaves.push(req);
+  DB.logs.push({ emp:currentEmp.name, empId:currentEmp.id||'N/A', date:getToday(), time:req.appliedTime, type:'LEAVE', ts:req.ts, note:type+': '+from+'→'+to });
 
   document.getElementById('lv-reason').value='';
   closeLeave();
@@ -969,8 +966,8 @@ async function addEmp(){
   const emps = getEmps();
   if(emps.find(e=>e.username===user)){ toast('Username already exists'); return; }
   const newEmp = { name, id:id||'', username:user, password:pass, added:getToday() };
-  emps.push(newEmp);
-  setEmps(emps);
+  // Add to in-memory DB immediately
+  DB.employees.push(newEmp);
   document.getElementById('ae-name').value='';
   document.getElementById('ae-id').value='';
   document.getElementById('ae-user').value='';
@@ -987,8 +984,8 @@ async function delEmp(i){
   const emps = getEmps();
   if(!confirm(`Remove ${emps[i].name}? Their attendance data will be kept.`)) return;
   const emp  = emps[i];
-  emps.splice(i,1);
-  setEmps(emps);
+  // Remove from in-memory DB immediately
+  DB.employees.splice(i,1);
   renderEmpList();
   updateAdminStats();
   toast(`${emp.name} removed — syncing...`);
@@ -1000,8 +997,8 @@ async function resetPass(i){
   const emps    = getEmps();
   const newPass = prompt(`Enter new password for ${emps[i].name}:`);
   if(!newPass||!newPass.trim()) return;
-  emps[i].password = newPass.trim();
-  setEmps(emps);
+  // Update in-memory DB immediately
+  DB.employees[i].password = newPass.trim();
   toast(`✓ Password updated — syncing...`);
   await sendSheet({ type:'RESET_PASSWORD', emp:emps[i].name, username:emps[i].username, password:newPass.trim(), date:getToday(), time:fmtTime(new Date()), ts:new Date().toISOString(), note:'', empId:emps[i].id||'' }, true);
   toast(`✓ Password saved to sheet`);
@@ -1051,9 +1048,9 @@ async function actLeave(id, status){
   const leaves = getLeaves();
   const idx    = leaves.findIndex(r=>r.id===id);
   if(idx===-1) return;
-  leaves[idx].status     = status;
-  leaves[idx].actionDate = getToday();
-  setLeaves(leaves);
+  // Update in-memory DB immediately
+  DB.leaves[idx].status     = status;
+  DB.leaves[idx].actionDate = getToday();
   updateAdminStats();
   renderLeaveRequests();
   toast(`✓ Leave ${status.toLowerCase()} — syncing...`);
@@ -1070,9 +1067,9 @@ async function addHoliday(){
   if(!date||!name){ toast('Fill both date and name'); return; }
   const list = getHolidays();
   if(list.find(h=>h.date===date)){ toast('Holiday already exists for this date'); return; }
-  list.push({date,name});
-  list.sort((a,b)=>a.date.localeCompare(b.date));
-  setHolidays(list);
+  // Add to in-memory DB immediately
+  DB.holidays.push({date,name});
+  DB.holidays.sort((a,b)=>a.date.localeCompare(b.date));
   document.getElementById('hd-date').value='';
   document.getElementById('hd-name').value='';
   renderHolidayList();
@@ -1082,8 +1079,8 @@ async function addHoliday(){
 }
 
 async function delHoliday(date){
-  const list = getHolidays().filter(h=>h.date!==date);
-  setHolidays(list);
+  // Remove from in-memory DB immediately
+  DB.holidays = DB.holidays.filter(h=>h.date!==date);
   renderHolidayList();
   toast('Holiday removed — syncing...');
   await sendSheet({ type:'REMOVE_HOLIDAY', date, emp:'admin', empId:'', time:fmtTime(new Date()), ts:new Date().toISOString(), note:'' }, true);
